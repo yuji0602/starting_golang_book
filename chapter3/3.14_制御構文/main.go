@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func main() {
 	/* if */
@@ -11,6 +14,25 @@ func main() {
 
 	/* switch */
 	funcSwitch()
+
+	/* 型アサーション */
+	funcTypeAssertion()
+
+	/* 型によるswitch */
+	funcTypeSwitch()
+
+	/* goto */
+	funcGoto()
+
+	/* ラベル付き文 */
+	funcLabel()
+
+	/* defer */
+	funcDefer()
+
+	/* panicとrecoverについては別ファイルにき切り出し */
+	/* goについては別ファイルに切り出し */
+	/* initについては別ファイルに切り出し */
 }
 
 func funcIf() {
@@ -127,4 +149,155 @@ func funcSwitch() {
 
 func plus(x int, y int) int {
 	return x + y
+}
+
+func funcTypeAssertion() {
+	fmt.Println("型アサーション")
+	/* interface{}には全ての方を指定できる */
+	anything(1)
+	anything(3.14)
+	anything(4 + 5i)
+	anything('海')
+	anything("日本語")
+	anything([...]int{1, 2, 3, 4, 5})
+
+	fmt.Println("型チェック")
+	// x.(T)のような式で型を動的にチェック出来る
+	var x interface{} = 3
+	i := x.(int)
+	fmt.Printf("i = %v\n", i)
+	// 下記の場合、panic: interface conversion: interface {} is int, not float64というエラーが出る
+	//f := x.(float64)
+	//fmt.Printf("f = %v\n", f)
+
+	// 以下のようなやり方だとエラーは発生せず、1番目に値、2番目にtrue/falseが入ってくる
+	var xx interface{} = 3.14
+	i, isInt := xx.(int)
+	fmt.Printf("i = %v, isInt = %v\n", i, isInt)
+	f, isFloat64 := xx.(float64)
+	fmt.Printf("f = %v, isFloat64 = %v\n", f, isFloat64)
+	s, isString := xx.(string)
+	fmt.Printf("s = %v, isString = %v\n", s, isString)
+	// 1つ目の引数に値が必要ない場合、_で省略して書くことが出来る。
+	_, isRune := xx.(rune)
+	fmt.Printf("isRune = %v\n", isRune)
+
+	/* 変数xはinterface{}型 */
+	fmt.Println("interface{}型と型アサーションを組み合わせた判定")
+	if x == nil {
+		fmt.Println("x is nil")
+	} else if i, isInt := x.(int); isInt {
+		fmt.Printf("x is integer : %d\n", i)
+	} else if s, isString := x.(string); isString {
+		fmt.Println(s)
+	} else {
+		fmt.Println("unsupported type!")
+	}
+}
+
+func anything(a interface{}) {
+	fmt.Println(a)
+}
+
+func funcTypeSwitch() {
+	fmt.Println("型によるswitch")
+	typeSwitch(true)
+	typeSwitch(2)
+	typeSwitch("あいう")
+	typeSwitch('あ')
+}
+
+func typeSwitch(x interface{}) {
+	/* 変数xはinterface{}型 */
+	switch x.(type) {
+	case bool:
+		fmt.Println("bool")
+	case int, uint:
+		fmt.Println("integer or unsigned integer")
+	case string:
+		fmt.Println("string")
+	default:
+		fmt.Println("don't know")
+	}
+
+	/* 型以外に値が必要な場合、v := x.(type)の形で変数に代入 */
+	switch v := x.(type) {
+	case bool:
+		fmt.Println("bool:", v)
+	case int:
+		fmt.Println(v * v)
+	case string:
+		fmt.Println("string:", v)
+	default:
+		fmt.Printf("%#v\n", v)
+	}
+	fmt.Println("-----")
+}
+
+func funcGoto() {
+	print("goto")
+	fmt.Println("ここは表示される")
+	goto L
+	fmt.Println("ここは表示されない")
+L: /* ラベル */
+	fmt.Println("gotoでラベル L までジャンプ")
+}
+
+func funcLabel() {
+	fmt.Println("ラベル付き文")
+	fmt.Println("ラベル - break")
+
+	LOOP:
+		for {
+			for {
+				for {
+					fmt.Println("開始")
+					break LOOP
+				}
+				fmt.Println("ここは通らない")
+			}
+			fmt.Println("ここは通らない")
+		}
+	fmt.Println("完了")
+
+	fmt.Println("ラベル - continue")
+	L:
+		for i := 1; i <= 3; i++ {
+			for j := 1; j <= 3; j++ {
+				if j > 1 {
+					continue L
+				}
+				fmt.Printf("%d * %d = %d\n", i, j, i*j)
+			}
+			fmt.Println("ここは処理されない！")
+		}
+}
+
+func funcDefer() {
+	fmt.Println("defer")
+	/* deferに登録された式は関数の終了時に評価される */
+	runDefer()
+
+	/* deferはリソースの開放処理で役に立つ */
+	file, err := os.Open("../../README.md")
+	if err != nil {
+		/* ファイルオープンに失敗したらreturn */
+		fmt.Println("ファイルオープンに失敗")
+		return
+	}
+	/* ファイルのクローズ処理を登録 */
+	defer file.Close()
+
+	/* deferで複数処理させたい場合は無名関数にする */
+	defer func() {
+		fmt.Println("A")
+		fmt.Println("B")
+		fmt.Println("C")
+	}()
+}
+
+func runDefer() {
+	defer fmt.Println("deferに登録された式は関数の終了時に評価される")
+	defer fmt.Println("deferを複数使うと後に記載したほうがが先に評価される")
+	fmt.Println("done")
 }
